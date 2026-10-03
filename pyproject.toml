@@ -6,7 +6,7 @@ authors = [{ name = "Robert Tjarko Lange", email = "robertlange0@gmail.com" }]
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.12,<3.15"
 dependencies = [
     # Bound to combinations CI actually covers rather than removing the
     # ceilings outright. Python 3.14 needs a narrower JAX/Flax window -- JAX
