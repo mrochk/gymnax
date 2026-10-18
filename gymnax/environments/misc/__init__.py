@@ -7,6 +7,7 @@ This module provides JAX implementations of miscellaneous environments, includin
 - FrozenLake
 - MetaMaze
 - PointRobot
+- PlanarQuadrotor
 - Reacher
 - Swimmer
 - Pong
@@ -16,6 +17,7 @@ from .bernoulli_bandit import BernoulliBandit
 from .frozen_lake import FrozenLake
 from .gaussian_bandit import GaussianBandit
 from .meta_maze import MetaMaze
+from .planar_quadrotor import PlanarQuadrotor
 from .point_robot import PointRobot
 from .pong import Pong
 from .reacher import Reacher
@@ -29,6 +31,7 @@ __all__ = [
     "FrozenLake",
     "MetaMaze",
     "PointRobot",
+    "PlanarQuadrotor",
     "Reacher",
     "Swimmer",
     "Pong",

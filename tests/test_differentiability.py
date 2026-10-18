@@ -13,6 +13,10 @@ from gymnax.wrappers import FlattenObservationWrapper
 SUPPORTED_ENVIRONMENTS = (
     "Pendulum-v1",
     "MountainCarContinuous-v0",
+    "CartPoleContinuous-v0",
+    "CartPoleSwingUp-v0",
+    "AcrobotContinuous-v0",
+    "PlanarQuadrotor-misc",
     "PointRobot-misc",
     "Reacher-misc",
     "Swimmer-misc",
@@ -186,6 +190,40 @@ def test_supported_environments_expose_finite_observation_gradients(env_name):
     assert env.supports_transition_gradients
     assert jnp.all(jnp.isfinite(observation_jacobian))
     assert jnp.any(jnp.abs(observation_jacobian) > 1e-7)
+
+
+@pytest.mark.parametrize("env_name", SUPPORTED_ENVIRONMENTS)
+def test_transition_jacobians_match_finite_differences(env_name):
+    with jax.enable_x64(True):
+        env, params = gymnax.make(env_name)
+        env = env.with_transition_gradients()
+        reset_key, action_key, step_key = jax.random.split(jax.random.key(3), 3)
+        _, state = env.reset(reset_key, params)
+        # Halved, to stay away from the action clipping bounds
+        action = 0.5 * env.action_space(params).sample(action_key)
+
+        leaves, treedef = jax.tree.flatten(state)
+        floats = [i for i, leaf in enumerate(leaves) if jnp.issubdtype(jnp.asarray(leaf).dtype, jnp.floating)]
+        sizes = [jnp.size(leaves[i]) for i in floats]
+
+        def transition(x):
+            """Next float state fields as a function of the float state fields and the action."""
+            new_leaves, parts = list(leaves), jnp.split(x, jnp.cumsum(jnp.array(sizes + [action.size]))[:-1])
+            for i, part in zip(floats, parts[:-1]):
+                new_leaves[i] = part.reshape(jnp.shape(leaves[i])).astype(jnp.float64)
+            current = jax.tree.unflatten(treedef, new_leaves)
+            _, next_state, *_ = env.step_env(step_key, current, parts[-1].reshape(action.shape), params)
+            next_leaves = jax.tree.leaves(next_state)
+            return jnp.concatenate([jnp.ravel(next_leaves[i]) for i in floats])
+
+        x = jnp.concatenate([jnp.ravel(jnp.asarray(leaves[i], jnp.float64)) for i in floats] + [jnp.ravel(action).astype(jnp.float64)])
+        eps = 1e-6
+        finite_differences = jnp.stack(
+            [(transition(x + eps * e) - transition(x - eps * e)) / (2 * eps) for e in jnp.eye(x.size)],
+            axis=1,
+        )
+
+        chex.assert_trees_all_close(jax.jacfwd(transition)(x), finite_differences, atol=1e-5, rtol=1e-5)
 
 
 def test_point_robot_preserves_position_dynamics_gradients_away_from_respawn():
