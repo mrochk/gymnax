@@ -20,6 +20,7 @@ from gymnax.environments.classic_control.acrobot import EnvState
 class EnvParams(acrobot.EnvParams):
     max_torque: float = 1.0  # Torque of the action 1, as in Acrobot-v1
     dense_reward: bool = False  # Height of the tip minus the goal height, at each step
+    goal_bonus: float = 100.0  # Added to the dense reward when the tip crosses the line
 
 
 class ContinuousAcrobot(acrobot.Acrobot):
@@ -68,13 +69,17 @@ class ContinuousAcrobot(acrobot.Acrobot):
         )
 
         # -1 per step until the tip is above the line, as in Acrobot-v1, or
-        # the height of the tip below the line, which is negative until then
+        # the height of the tip below the line, which is negative until then,
+        # plus a bonus for crossing it, so that a planner does not settle for
+        # swinging just below the line
         done = self.is_terminal(state, params)
-        sparse = -1.0 * (1 - self.is_terminated(state, params))
+        reached = self.is_terminated(state, params)
+        sparse = -1.0 * (1 - reached)
         height = -jnp.cos(state.joint_angle1) - jnp.cos(
             state.joint_angle1 + state.joint_angle2
         )
-        reward = jax.lax.select(params.dense_reward, height - 1.0, sparse)
+        dense = height - 1.0 + params.goal_bonus * reached
+        reward = jax.lax.select(params.dense_reward, dense, sparse)
         observation, state = self._apply_transition_gradient_policy(
             self.get_obs(state), state
         )

@@ -87,3 +87,19 @@ def test_dense_reward_is_the_height_of_the_tip_below_the_line():
     np.testing.assert_allclose(reward, -np.cos(t1) - np.cos(t1 + t2) - 1.0, atol=1e-6)
     # Hanging down, the tip is 2 below the pivot and 3 below the line
     np.testing.assert_allclose(reward, -3.0, atol=0.1)
+
+
+def test_dense_reward_adds_the_goal_bonus_above_the_line():
+    env, params = gymnax.make("AcrobotContinuous-v0")
+    params = params.replace(dense_reward=True)
+    _, state = env.reset(jax.random.key(0), params)
+    # Both links up, the tip is 2 above the pivot and 1 above the line
+    state = state.replace(joint_angle1=jnp.pi, joint_angle2=0.0, velocity_1=0.0, velocity_2=0.0)
+    _, next_state, reward, done, _ = env.step_env(
+        jax.random.key(1), state, jnp.array([0.0]), params
+    )
+    t1, t2 = next_state.joint_angle1, next_state.joint_angle2
+    assert done
+    np.testing.assert_allclose(
+        reward, -np.cos(t1) - np.cos(t1 + t2) - 1.0 + params.goal_bonus, atol=1e-6
+    )
