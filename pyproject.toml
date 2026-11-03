@@ -12,8 +12,7 @@ dependencies = [
     # ceilings outright. Python 3.14 needs a narrower JAX/Flax window -- JAX
     # gained 3.14 wheels in 0.8.1 and Flax fixed a 3.14 `__annotations__`
     # regression in 0.12.3 -- so unsupported combinations fail resolution.
-    "jax>=0.6,<0.12; python_version < '3.14'",
-    "jax>=0.8.1,<0.12; python_version >= '3.14'",
+    "jax==0.12.0.1",
     "flax; python_version < '3.14'",
     "flax>=0.12.3; python_version >= '3.14'",
     "gymnasium>=1.1,<1.4",
